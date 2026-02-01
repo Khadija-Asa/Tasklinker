@@ -12,6 +12,7 @@ use App\Form\RegisterType;
 use App\Entity\Employe;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
 class EmployeController extends AbstractController
 {
@@ -23,12 +24,14 @@ class EmployeController extends AbstractController
 
     }
 
+    // welcome route
     #[Route('/bienvenue', name: 'app_bienvenue')]
     public function bienvenue(): Response
     {
-        return $this->render('auth/bienvenue.html.twig');
+        return $this->render('register/bienvenue.html.twig');
     }
 
+    // register route
     #[Route('/register', name: 'app_register')]
     public function register(Request $request, UserPasswordHasherInterface $hasher): Response
     {
@@ -53,6 +56,28 @@ class EmployeController extends AbstractController
         ]);
     }
 
+    // login route
+    #[Route('/connexion', name: 'app_login')]
+    public function login(AuthenticationUtils $authenticationUtils): Response
+    {
+        $error = $authenticationUtils->getLastAuthenticationError();
+        $email = $authenticationUtils->getLastUsername();
+
+        return $this->render('register/login.html.twig', [
+            'email' => $email,
+            'error' => $error,
+        ]);
+    }
+
+    // logout route
+    #[Route('/deconnexion', name: 'app_logout')]
+    public function logout(): void
+    {
+        throw new \Exception('This should never be reached!');
+    }
+
+
+    // employe's list route
     #[Route('/employes', name: 'app_employes')]
     public function employes(): Response
     {
@@ -77,6 +102,7 @@ class EmployeController extends AbstractController
         ]);
     }
 
+    // delete
     #[Route('/employes/{id}/supprimer', name: 'app_employe_delete')]
     public function supprimerEmploye($id): Response
     {
@@ -92,6 +118,7 @@ class EmployeController extends AbstractController
         return $this->redirectToRoute('app_employes');
     }
 
+    // edit
     #[Route('/employes/{id}/editer', name: 'app_employe_edit')]
     public function editerEmploye($id, Request $request): Response
     {
@@ -114,4 +141,6 @@ class EmployeController extends AbstractController
             'form' => $form->createView(),
         ]);
     }
+
+
 }

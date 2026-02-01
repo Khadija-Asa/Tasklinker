@@ -4,8 +4,8 @@
 
 <h1>Se connecter</h1>
 
-    {% if erreur %}
-        <div class="error-login">{{ erreur.messageKey|trans(erreur.messageData, 'security') }}</div>
+    {% if error %}
+        <div class="error-login">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
     {% endif %}
 
     <form action="{{ path('app_login') }}" method="post">
