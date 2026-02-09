@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Projet;
+use App\Entity\Employe;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -21,28 +22,26 @@ class ProjetRepository extends ServiceEntityRepository
         parent::__construct($registry, Projet::class);
     }
 
-//    /**
-//     * @return Projet[] Returns an array of Projet objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('p')
-//            ->andWhere('p.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('p.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
+    /**
+     * Retourne les projets accessibles par l'utilisateur connecté
+     *
+     * @param Employe $user
+     * @return Projet[]
+     */
+    public function findProjectsForUser(Employe $user): array
+    {
+        // Si l'utilisateur est admin, on retourne tous les projets non archivés
+        if (in_array('ROLE_ADMIN', $user->getRoles())) {
+            return $this->findBy(['archive' => false]);
+        }
 
-//    public function findOneBySomeField($value): ?Projet
-//    {
-//        return $this->createQueryBuilder('p')
-//            ->andWhere('p.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+        // Sinon, on retourne uniquement les projets assignés à cet employé
+        return $this->createQueryBuilder('p')
+            ->join('p.employes', 'e')
+            ->where('e = :user')
+            ->andWhere('p.archive = false')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getResult();
+    }
 }

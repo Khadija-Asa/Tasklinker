@@ -116,7 +116,6 @@ class Employe implements UserInterface, PasswordAuthenticatedUserInterface
     public function getRoles(): array
     {
         $roles = $this->roles;
-        // guarantee every user at least has ROLE_USER
         $roles[] = 'ROLE_USER';
 
         return array_unique($roles);
@@ -200,6 +199,18 @@ class Employe implements UserInterface, PasswordAuthenticatedUserInterface
         if ($this->projets->removeElement($projet)) {
             $projet->removeEmploye($this);
         }
+
+        return $this;
+    }
+
+    public function isAdmin(): bool 
+    {
+        return in_array('ROLE_ADMIN', $this->roles);
+    }
+
+    public function setAdmin(bool $admin): static 
+    {
+        $this->roles = $admin ? ['ROLE_ADMIN'] : [];
 
         return $this;
     }

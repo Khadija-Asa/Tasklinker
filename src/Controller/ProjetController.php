@@ -11,6 +11,7 @@ use App\Repository\StatutRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\Projet;
 use App\Form\ProjetType;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 class ProjetController extends AbstractController
 {
@@ -18,28 +19,25 @@ class ProjetController extends AbstractController
         private ProjetRepository $projetRepository,
         private StatutRepository $statutRepository,
         private EntityManagerInterface $entityManager,
-    )
-    {
+    ) {}
 
-    }
-
+    // PAGE D'ACCUEIL
     #[Route('/', name: 'app_projets')]
     public function projets(): Response
     {
-        $projets = $this->projetRepository->findBy([
-            'archive' => false,
-        ]);
+        $projets = $this->projetRepository->findProjectsForUser($this->getUser());
 
         return $this->render('projet/liste.html.twig', [
             'projets' => $projets,
         ]);
     }
 
+    // AJOUTER UN PROJET
     #[Route('/projets/ajouter', name: 'app_projet_add')]
+    #[IsGranted('ROLE_ADMIN')]
     public function ajouterProjet(Request $request): Response
     {  
         $projet = new Projet();
-
         $form = $this->createForm(ProjetType::class, $projet);
         $form->handleRequest($request);
 
@@ -47,24 +45,28 @@ class ProjetController extends AbstractController
             $projet->setArchive(false);
             $this->entityManager->persist($projet);
             $this->entityManager->flush();
+
             return $this->redirectToRoute('app_projet', ['id' => $projet->getId()]);
         }
-
 
         return $this->render('projet/nouveau.html.twig', [
             'form' => $form->createView(),
         ]);
     }
 
+    // AFFICHER UN PROJET
     #[Route('/projets/{id}', name: 'app_projet')]
     public function projet(int $id): Response
-    {  
-        $statuts = $this->statutRepository->findAll();
+    {
         $projet = $this->projetRepository->find($id);
 
         if(!$projet || $projet->isArchive()) {
             return $this->redirectToRoute('app_projets');
         }
+
+        $this->denyAccessUnlessGranted('acces_projet', $projet);
+
+        $statuts = $this->statutRepository->findAll();
 
         return $this->render('projet/projet.html.twig', [
             'projet' => $projet,
@@ -72,7 +74,9 @@ class ProjetController extends AbstractController
         ]);
     }
 
+    // ARCHIVER UN PROJET
     #[Route('/projets/{id}/archiver', name: 'app_projet_archive')]
+    #[IsGranted('ROLE_ADMIN')]
     public function archiverProjet(int $id): Response
     {  
         $projet = $this->projetRepository->find($id);
@@ -87,29 +91,30 @@ class ProjetController extends AbstractController
         return $this->redirectToRoute('app_projets');
     }
 
-
+    // EDITER UN PROJET
     #[Route('/projets/{id}/editer', name: 'app_projet_edit')]
-    public function editerProjet(int $id, Request $request): Response
-    {  
-        $projet = $this->projetRepository->find($id);
+public function editerProjet(int $id, Request $request): Response
+{
+    $projet = $this->projetRepository->find($id);
 
-        if(!$projet || $projet->isArchive()) {
-            return $this->redirectToRoute('app_projets');
-        }
-
-        $form = $this->createForm(ProjetType::class, $projet);
-        $form->handleRequest($request);
-
-        if($form->isSubmitted() && $form->isValid()) {
-            $projet->setArchive(false);
-            $this->entityManager->flush();
-            return $this->redirectToRoute('app_projet', ['id' => $projet->getId()]);
-        }
-
-
-        return $this->render('projet/editer.html.twig', [
-            'projet' => $projet,
-            'form' => $form->createView(),
-        ]);
+    if (!$projet || $projet->isArchive()) {
+        return $this->redirectToRoute('app_projets');
     }
+
+    $this->denyAccessUnlessGranted('acces_projet', $projet);
+
+    $form = $this->createForm(ProjetType::class, $projet);
+    $form->handleRequest($request);
+
+    if ($form->isSubmitted() && $form->isValid()) {
+        $this->entityManager->flush();
+        return $this->redirectToRoute('app_projet', ['id' => $projet->getId()]);
+    }
+
+    return $this->render('projet/editer.html.twig', [
+        'projet' => $projet,
+        'form' => $form->createView(),
+    ]);
+}
+
 }
